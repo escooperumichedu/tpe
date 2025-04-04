@@ -1,38 +1,12 @@
-# NLconstraints are the differential equations that describe the dynamics of the system
-dV1_dt[k=0:Nd-1], V1[k] + (F1[k] + F2[k] + fix.Fr2[k+1] - F3[k]) * dtd == V1[k+1]
+ISE = sum((V1_vec[k] - V1_sp)^2 + (V2_vec[k] - V2_sp)^2 + (V3_vec[k] - V3_sp)^2 + (V4_vec[k] - V4_sp)^2 + (V5_vec[k] - V5_sp)^2 +
+(T1_vec[k] - T1_sp)^2 + (T2_vec[k] - T2_sp)^2 + (T3_vec[k] - T3_sp)^2 + (T4_vec[k] - T4_sp)^2 + (T5_vec[k] - T5_sp)^2 +
+(CA1_vec[k] - CA1_sp)^2 + (CA2_vec[k] - CA2_sp)^2 + (CA3_vec[k] - CA3_sp)^2 + (CA4_vec[k] - CA4_sp)^2 + (CA5_vec[k] - CA5_sp)^2 +
+(CB1_vec[k] - CB1_sp)^2 + (CB2_vec[k] - CB2_sp)^2 + (CB3_vec[k] - CB3_sp)^2 + (CB4_vec[k] - CB4_sp)^2 + (CB5_vec[k] - CB5_sp)^2 +
+(CC1_vec[k] - CC1_sp)^2 + (CC2_vec[k] - CC2_sp)^2 + (CC3_vec[k] - CC3_sp)^2 + (CC4_vec[k] - CC4_sp)^2 + (CC5_vec[k] - CC5_sp)^2 +
+(CD1_vec[k] - CD1_sp)^2 + (CD2_vec[k] - CD2_sp)^2 + (CD3_vec[k] - CD3_sp)^2 + (CD4_vec[k] - CD4_sp)^2 + (CD5_vec[k] - CD5_sp)^2 for k = 1:N+1)
 
-dT1_dt[k=0:Nd-1], T1[k] + (
-    ((Q1[k] + F1[k] * CA0 * H_A(TA0) + F2[k] * CB0 * H_B(TB0) +
-      (fix.Fr2[k+1] * CAr(MA(fix.T4[k+1], fix.F7[k+1], fix.CA3[k+1], fix.F9[k+1], fix.CA5[k+1], fix.CA3[k+1], fix.CB3[k+1], fix.CC3[k+1], fix.CD3[k+1], fix.CA5[k+1], fix.CB5[k+1], fix.CC5[k+1], fix.CD5[k+1]), MB(fix.T4[k+1], fix.F7[k+1], fix.CB3[k+1], fix.F9[k+1], fix.CB5[k+1], fix.CA3[k+1], fix.CB3[k+1], fix.CC3[k+1], fix.CD3[k+1], fix.CA5[k+1], fix.CB5[k+1], fix.CC5[k+1], fix.CD5[k+1]), MC(fix.T4[k+1], fix.F7[k+1], fix.CC3[k+1], fix.F9[k+1], fix.CC5[k+1], fix.CA3[k+1], fix.CB3[k+1], fix.CC3[k+1], fix.CD3[k+1], fix.CA5[k+1], fix.CB5[k+1], fix.CC5[k+1], fix.CD5[k+1]), MD(fix.T4[k+1], fix.F7[k+1], fix.CD3[k+1], fix.F9[k+1], fix.CD5[k+1], fix.CA3[k+1], fix.CB3[k+1], fix.CC3[k+1], fix.CD3[k+1], fix.CA5[k+1], fix.CB5[k+1], fix.CC5[k+1], fix.CD5[k+1])) * H_A(fix.T4[k+1]) - F3[k] * CA1[k] * H_A(T1[k])) +
-      (fix.Fr2[k+1] * CBr(MA(fix.T4[k+1], fix.F7[k+1], fix.CA3[k+1], fix.F9[k+1], fix.CA5[k+1], fix.CA3[k+1], fix.CB3[k+1], fix.CC3[k+1], fix.CD3[k+1], fix.CA5[k+1], fix.CB5[k+1], fix.CC5[k+1], fix.CD5[k+1]), MB(fix.T4[k+1], fix.F7[k+1], fix.CB3[k+1], fix.F9[k+1], fix.CB5[k+1], fix.CA3[k+1], fix.CB3[k+1], fix.CC3[k+1], fix.CD3[k+1], fix.CA5[k+1], fix.CB5[k+1], fix.CC5[k+1], fix.CD5[k+1]), MC(fix.T4[k+1], fix.F7[k+1], fix.CC3[k+1], fix.F9[k+1], fix.CC5[k+1], fix.CA3[k+1], fix.CB3[k+1], fix.CC3[k+1], fix.CD3[k+1], fix.CA5[k+1], fix.CB5[k+1], fix.CC5[k+1], fix.CD5[k+1]), MD(fix.T4[k+1], fix.F7[k+1], fix.CD3[k+1], fix.F9[k+1], fix.CD5[k+1], fix.CA3[k+1], fix.CB3[k+1], fix.CC3[k+1], fix.CD3[k+1], fix.CA5[k+1], fix.CB5[k+1], fix.CC5[k+1], fix.CD5[k+1])) * H_B(fix.T4[k+1]) - F3[k] * CB1[k] * H_B(T1[k])) +
-      (fix.Fr2[k+1] * CCr(MA(fix.T4[k+1], fix.F7[k+1], fix.CA3[k+1], fix.F9[k+1], fix.CA5[k+1], fix.CA3[k+1], fix.CB3[k+1], fix.CC3[k+1], fix.CD3[k+1], fix.CA5[k+1], fix.CB5[k+1], fix.CC5[k+1], fix.CD5[k+1]), MB(fix.T4[k+1], fix.F7[k+1], fix.CB3[k+1], fix.F9[k+1], fix.CB5[k+1], fix.CA3[k+1], fix.CB3[k+1], fix.CC3[k+1], fix.CD3[k+1], fix.CA5[k+1], fix.CB5[k+1], fix.CC5[k+1], fix.CD5[k+1]), MC(fix.T4[k+1], fix.F7[k+1], fix.CC3[k+1], fix.F9[k+1], fix.CC5[k+1], fix.CA3[k+1], fix.CB3[k+1], fix.CC3[k+1], fix.CD3[k+1], fix.CA5[k+1], fix.CB5[k+1], fix.CC5[k+1], fix.CD5[k+1]), MD(fix.T4[k+1], fix.F7[k+1], fix.CD3[k+1], fix.F9[k+1], fix.CD5[k+1], fix.CA3[k+1], fix.CB3[k+1], fix.CC3[k+1], fix.CD3[k+1], fix.CA5[k+1], fix.CB5[k+1], fix.CC5[k+1], fix.CD5[k+1])) * H_C(fix.T4[k+1]) - F3[k] * CC1[k] * H_C(T1[k])) +
-      (fix.Fr2[k+1] * CDr(MA(fix.T4[k+1], fix.F7[k+1], fix.CA3[k+1], fix.F9[k+1], fix.CA5[k+1], fix.CA3[k+1], fix.CB3[k+1], fix.CC3[k+1], fix.CD3[k+1], fix.CA5[k+1], fix.CB5[k+1], fix.CC5[k+1], fix.CD5[k+1]), MB(fix.T4[k+1], fix.F7[k+1], fix.CB3[k+1], fix.F9[k+1], fix.CB5[k+1], fix.CA3[k+1], fix.CB3[k+1], fix.CC3[k+1], fix.CD3[k+1], fix.CA5[k+1], fix.CB5[k+1], fix.CC5[k+1], fix.CD5[k+1]), MC(fix.T4[k+1], fix.F7[k+1], fix.CC3[k+1], fix.F9[k+1], fix.CC5[k+1], fix.CA3[k+1], fix.CB3[k+1], fix.CC3[k+1], fix.CD3[k+1], fix.CA5[k+1], fix.CB5[k+1], fix.CC5[k+1], fix.CD5[k+1]), MD(fix.T4[k+1], fix.F7[k+1], fix.CD3[k+1], fix.F9[k+1], fix.CD5[k+1], fix.CA3[k+1], fix.CB3[k+1], fix.CC3[k+1], fix.CD3[k+1], fix.CA5[k+1], fix.CB5[k+1], fix.CC5[k+1], fix.CD5[k+1])) * H_D(fix.T4[k+1]) - F3[k] * CD1[k] * H_D(T1[k])))
-     /
-     (CA1[k] * Cp_A * V1[k] + CB1[k] * Cp_B * V1[k] + CC1[k] * Cp_C * V1[k] + CD1[k] * Cp_D * V1[k])) +
-    (-delH_r1 * r1(T1[k], CA1[k], CB1[k]) - delH_r2 * r2(T1[k], CB1[k], CC1[k], CD1[k])) /
-    (CA1[k] * Cp_A + CB1[k] * Cp_B + CC1[k] * Cp_C + CD1[k] * Cp_D)) * dtd == T1[k+1]
 
-dCA1_dt[k=0:Nd-1], CA1[k] + (
-    ((F1[k] * CA0 + fix.Fr2[k+1] * CAr(MA(fix.T4[k+1], fix.F7[k+1], fix.CA3[k+1], fix.F9[k+1], fix.CA5[k+1], fix.CA3[k+1], fix.CB3[k+1], fix.CC3[k+1], fix.CD3[k+1], fix.CA5[k+1], fix.CB5[k+1], fix.CC5[k+1], fix.CD5[k+1]), MB(fix.T4[k+1], fix.F7[k+1], fix.CB3[k+1], fix.F9[k+1], fix.CB5[k+1], fix.CA3[k+1], fix.CB3[k+1], fix.CC3[k+1], fix.CD3[k+1], fix.CA5[k+1], fix.CB5[k+1], fix.CC5[k+1], fix.CD5[k+1]), MC(fix.T4[k+1], fix.F7[k+1], fix.CC3[k+1], fix.F9[k+1], fix.CC5[k+1], fix.CA3[k+1], fix.CB3[k+1], fix.CC3[k+1], fix.CD3[k+1], fix.CA5[k+1], fix.CB5[k+1], fix.CC5[k+1], fix.CD5[k+1]), MD(fix.T4[k+1], fix.F7[k+1], fix.CD3[k+1], fix.F9[k+1], fix.CD5[k+1], fix.CA3[k+1], fix.CB3[k+1], fix.CC3[k+1], fix.CD3[k+1], fix.CA5[k+1], fix.CB5[k+1], fix.CC5[k+1], fix.CD5[k+1]))
-      -
-      F3[k] * CA1[k])
-     /
-     V1[k]) - r1(T1[k], CA1[k], CB1[k])) * dtd == CA1[k+1]
 
-dCB1_dt[k=0:Nd-1], CB1[k] + (
-    ((F2[k] * CB0 + fix.Fr2[k+1] * CBr(MA(fix.T4[k+1], fix.F7[k+1], fix.CA3[k+1], fix.F9[k+1], fix.CA5[k+1], fix.CA3[k+1], fix.CB3[k+1], fix.CC3[k+1], fix.CD3[k+1], fix.CA5[k+1], fix.CB5[k+1], fix.CC5[k+1], fix.CD5[k+1]), MB(fix.T4[k+1], fix.F7[k+1], fix.CB3[k+1], fix.F9[k+1], fix.CB5[k+1], fix.CA3[k+1], fix.CB3[k+1], fix.CC3[k+1], fix.CD3[k+1], fix.CA5[k+1], fix.CB5[k+1], fix.CC5[k+1], fix.CD5[k+1]), MC(fix.T4[k+1], fix.F7[k+1], fix.CC3[k+1], fix.F9[k+1], fix.CC5[k+1], fix.CA3[k+1], fix.CB3[k+1], fix.CC3[k+1], fix.CD3[k+1], fix.CA5[k+1], fix.CB5[k+1], fix.CC5[k+1], fix.CD5[k+1]), MD(fix.T4[k+1], fix.F7[k+1], fix.CD3[k+1], fix.F9[k+1], fix.CD5[k+1], fix.CA3[k+1], fix.CB3[k+1], fix.CC3[k+1], fix.CD3[k+1], fix.CA5[k+1], fix.CB5[k+1], fix.CC5[k+1], fix.CD5[k+1]))
-      -
-      F3[k] * CB1[k]) /
-     V1[k]) - r1(T1[k], CA1[k], CB1[k]) - r2(T1[k], CB1[k], CC1[k], CD1[k])) * dtd == CB1[k+1]
-
-dCC1_dt[k=0:Nd-1], CC1[k] + (
-    ((fix.Fr2[k+1] * CCr(MA(fix.T4[k+1], fix.F7[k+1], fix.CA3[k+1], fix.F9[k+1], fix.CA5[k+1], fix.CA3[k+1], fix.CB3[k+1], fix.CC3[k+1], fix.CD3[k+1], fix.CA5[k+1], fix.CB5[k+1], fix.CC5[k+1], fix.CD5[k+1]), MB(fix.T4[k+1], fix.F7[k+1], fix.CB3[k+1], fix.F9[k+1], fix.CB5[k+1], fix.CA3[k+1], fix.CB3[k+1], fix.CC3[k+1], fix.CD3[k+1], fix.CA5[k+1], fix.CB5[k+1], fix.CC5[k+1], fix.CD5[k+1]), MC(fix.T4[k+1], fix.F7[k+1], fix.CC3[k+1], fix.F9[k+1], fix.CC5[k+1], fix.CA3[k+1], fix.CB3[k+1], fix.CC3[k+1], fix.CD3[k+1], fix.CA5[k+1], fix.CB5[k+1], fix.CC5[k+1], fix.CD5[k+1]), MD(fix.T4[k+1], fix.F7[k+1], fix.CD3[k+1], fix.F9[k+1], fix.CD5[k+1], fix.CA3[k+1], fix.CB3[k+1], fix.CC3[k+1], fix.CD3[k+1], fix.CA5[k+1], fix.CB5[k+1], fix.CC5[k+1], fix.CD5[k+1]))
-      -
-      F3[k] * CC1[k]) /
-     V1[k]) + r1(T1[k], CA1[k], CB1[k]) - r2(T1[k], CB1[k], CC1[k], CD1[k])) * dtd == CC1[k+1]
-
-dCD1_dt[k=0:Nd-1], CD1[k] + (
-    ((fix.Fr2[k+1] * CDr(MA(fix.T4[k+1], fix.F7[k+1], fix.CA3[k+1], fix.F9[k+1], fix.CA5[k+1], fix.CA3[k+1], fix.CB3[k+1], fix.CC3[k+1], fix.CD3[k+1], fix.CA5[k+1], fix.CB5[k+1], fix.CC5[k+1], fix.CD5[k+1]), MB(fix.T4[k+1], fix.F7[k+1], fix.CB3[k+1], fix.F9[k+1], fix.CB5[k+1], fix.CA3[k+1], fix.CB3[k+1], fix.CC3[k+1], fix.CD3[k+1], fix.CA5[k+1], fix.CB5[k+1], fix.CC5[k+1], fix.CD5[k+1]), MC(fix.T4[k+1], fix.F7[k+1], fix.CC3[k+1], fix.F9[k+1], fix.CC5[k+1], fix.CA3[k+1], fix.CB3[k+1], fix.CC3[k+1], fix.CD3[k+1], fix.CA5[k+1], fix.CB5[k+1], fix.CC5[k+1], fix.CD5[k+1]), MD(fix.T4[k+1], fix.F7[k+1], fix.CD3[k+1], fix.F9[k+1], fix.CD5[k+1], fix.CA3[k+1], fix.CB3[k+1], fix.CC3[k+1], fix.CD3[k+1], fix.CA5[k+1], fix.CB5[k+1], fix.CC5[k+1], fix.CD5[k+1]))
-      -
-      F3[k] * CD1[k]) /
-     V1[k]) + r2(T1[k], CB1[k], CC1[k], CD1[k])) * dtd == CD1[k+1]
+ISC = sum((F1[k] - F1_sp)^2 + (F2[k] - F2_sp)^2 + (F3[k] - F3_sp)^2 + (F4[k] - F4_sp)^2 + (F5[k] - F5_sp)^2 +
+(F6[k] - F6_sp)^2 + (F7[k] - F7_sp)^2 + (F8[k] - F8_sp)^2 + (F9[k] - F9_sp)^2 +  (F10[k] - F10_sp)^2 +  (Fr1[k] - Fr1_sp)^2 +  (Fr2[k] - Fr2_sp)^2 +
+(Q1[k] - Q1_sp)^2 + (Q2[k] - Q2_sp)^2 + (Q3[k] - Q3_sp)^2 + (Q4[k] - Q4_sp)^2 + (Q5[k] - Q5_sp)^2 for k = 1:N+1)
