@@ -446,7 +446,23 @@ function DMPC_1()
     for k = 1:10
 
         # Solve subproblems
-        traj.F1, traj.F2, traj.F01, traj.F02, traj.Fr1, traj.Q1, traj.Q2, traj.T1, traj.T2, traj.V1, traj.V2, traj.CA1, traj.CA2 = sp1()
+        F1, F2, F01, F02, Fr1, Q1, Q2, T1, T2, V1, V2, CA1, CA2 = sp1()
+        F3, F4, F03, F04, Fr2, Q3, Q4, T3, T4, V3, V4, CA3, CA4 = sp2()
+
+        traj.F1
+        traj.F2
+        traj.F01
+        traj.F02
+        traj.Fr1
+         traj.Q1
+         traj.Q2
+         traj.T1
+         traj.T2
+         traj.V1
+         traj.V2
+         traj.CA1
+         traj.CA2
+         
         traj.F3, traj.F4, traj.F03, traj.F04, traj.Fr2, traj.Q3, traj.Q4, traj.T3, traj.T4, traj.V3, traj.V4, traj.CA3, traj.CA4 = sp2()
 
         # Update previous trajectory (if needed for convergence checking)

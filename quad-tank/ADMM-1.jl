@@ -1,4 +1,4 @@
-using JuMP, Ipopt, CSV, DataFrames, Plots
+using JuMP, Ipopt, CSV, DataFrames, Plots, LinearAlgebra
 
 mutable struct Weights
     ca1
@@ -92,10 +92,10 @@ T2_init = 350
 T3_init = 345
 T4_init = 360
 
-V1_init = 3.0
-V2_init = 3.5
+V1_init = 9.0
+V2_init = 1.5
 V3_init = 3.5
-V4_init = 4.0
+V4_init = 10.0
 
 V1_sp = 1.0
 V2_sp = 3.0
@@ -164,13 +164,31 @@ Q4_sp = 1E4
 
 N = 100
 
-initial_rho = 1e2
+initial_rho = 0.5 # 0.5 is the best
 
 # Structures for ADMM decomposition information
 traj = ProcessSystemVariables(zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1))
 prev_traj = ProcessSystemVariables(zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1))
 copy = ProcessSystemVariables(zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1))
 prev_copy = ProcessSystemVariables(zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1))
+
+function gW(sp)
+    wt = -Float64(floor(log10(abs(sp^2))))
+    return 1 * 10^(wt)
+end
+
+# w = Weights(gW(CA1_sp), gW(CA2_sp), gW(CA3_sp), gW(CA4_sp), gW(T1_sp), gW(T2_sp), gW(T3_sp), gW(T4_sp), gW(V1_sp), gW(V2_sp), gW(V3_sp), gW(V4_sp), 1e0*gW(F1_sp), 1e0*gW(F2_sp), 1e0*gW(F3_sp), 1e0*gW(F4_sp), 1e0*gW(F01_sp), 1e0*gW(F02_sp), 1e0*gW(F03_sp), 1e0*gW(F04_sp), 1e0*gW(Fr1_sp), 1e0*gW(Fr2_sp), 1e0*gW(Q1_sp), 1e0*gW(Q2_sp), 1e0*gW(Q3_sp), 1e0*gW(Q4_sp))
+
+w = let elements = [gW(CA1_sp), gW(CA2_sp), gW(CA3_sp), gW(CA4_sp),
+        gW(T1_sp), gW(T2_sp), gW(T3_sp), gW(T4_sp),
+        gW(V1_sp), gW(V2_sp), gW(V3_sp), gW(V4_sp),
+        1e2 * gW(F1_sp), 1e2 * gW(F2_sp), 1e2 * gW(F3_sp), 1e2 * gW(F4_sp),
+        1e2 * gW(F01_sp), 1e2 * gW(F02_sp), 1e2 * gW(F03_sp), 1e2 * gW(F04_sp),
+        1e2 * gW(Fr1_sp), 1e2 * gW(Fr2_sp),
+        1e1 * gW(Q1_sp), 1e1 * gW(Q2_sp), 1e1 * gW(Q3_sp), 1e1 * gW(Q4_sp)]
+    max_val = maximum(elements)
+    Weights((e / max_val for e in elements)...)
+end
 
 # Formulate a guess for trajectory and copy by dynamics at steady state
 traj.F1 .= F1_sp
@@ -227,34 +245,198 @@ for k = 1:N
 
 end
 
-prev_traj = traj
-copy = traj
-prev_copy = traj
+# Formulate a guess for trajectory and copy by dynamics at steady state
+prev_traj.F1 .= F1_sp
+prev_traj.F2 .= F2_sp
+prev_traj.F3 .= F3_sp
+prev_traj.F4 .= F4_sp
 
-function gW(sp)
-    wt = -Float64(floor(log10(abs(sp^2))))
-    return 1 * 10^(wt)
+prev_traj.F01 .= F01_sp
+prev_traj.F02 .= F02_sp
+prev_traj.F03 .= F03_sp
+prev_traj.F04 .= F04_sp
+
+prev_traj.Fr1 .= Fr1_sp
+prev_traj.Fr2 .= Fr2_sp
+
+prev_traj.Q1 .= Q1_sp
+prev_traj.Q2 .= Q2_sp
+prev_traj.Q3 .= Q3_sp
+prev_traj.Q4 .= Q4_sp
+
+prev_traj.CA1[1] = CA1_init
+prev_traj.CA2[1] = CA2_init
+prev_traj.CA3[1] = CA3_init
+prev_traj.CA4[1] = CA4_init
+
+prev_traj.T1[1] = T1_init
+prev_traj.T2[1] = T2_init
+prev_traj.T3[1] = T3_init
+prev_traj.T4[1] = T4_init
+
+prev_traj.V1[1] = V1_init
+prev_traj.V2[1] = V2_init
+prev_traj.V3[1] = V3_init
+prev_traj.V4[1] = V4_init
+
+for k = 1:N
+
+    prev_traj.V1[k+1] = prev_traj.V1[k] + (prev_traj.F01[k] + prev_traj.Fr2[k] + prev_traj.Fr1[k] - prev_traj.F1[k]) * dt
+    prev_traj.V2[k+1] = prev_traj.V2[k] + (prev_traj.F1[k] + prev_traj.F02[k] - prev_traj.F2[k]) * dt
+    prev_traj.V3[k+1] = prev_traj.V3[k] + ((prev_traj.F2[k] - prev_traj.Fr1[k]) + prev_traj.F03[k] - prev_traj.F3[k]) * dt
+    prev_traj.V4[k+1] = prev_traj.V4[k] + (prev_traj.F3[k] + prev_traj.F04[k] - prev_traj.F4[k]) * dt
+
+    prev_traj.CA1[k+1] = prev_traj.CA1[k] + ((prev_traj.F01[k] / prev_traj.V1[k]) * (CA01 - prev_traj.CA1[k]) + (prev_traj.Fr1[k] / prev_traj.V1[k]) * (prev_traj.CA2[k] - prev_traj.CA1[k]) + (prev_traj.Fr2[k] / prev_traj.V1[k]) * (prev_traj.CA4[k] - prev_traj.CA1[k]) - (k10 * exp(-E1 / (R * prev_traj.T1[k])) * prev_traj.CA1[k] + k20 * exp(-E2 / (R * prev_traj.T1[k])) * prev_traj.CA1[k] + k30 * exp(-E3 / (R * prev_traj.T1[k])) * prev_traj.CA1[k])) * dt
+    prev_traj.T1[k+1] = prev_traj.T1[k] + ((prev_traj.F01[k] / prev_traj.V1[k]) * (T01 - prev_traj.T1[k]) + (prev_traj.Fr1[k] / prev_traj.V1[k]) * (prev_traj.T2[k] - prev_traj.T1[k]) + (prev_traj.Fr2[k] / prev_traj.V1[k]) * (prev_traj.T4[k] - prev_traj.T1[k]) - ((delH1 / (rho * cp)) * k10 * exp(-E1 / (R * prev_traj.T1[k])) * prev_traj.CA1[k] + (delH2 / (rho * cp)) * k20 * exp(-E2 / (R * prev_traj.T1[k])) * prev_traj.CA1[k] + (delH3 / (rho * cp)) * k30 * exp(-E3 / (R * prev_traj.T1[k])) * prev_traj.CA1[k]) + prev_traj.Q1[k] / (rho * cp * prev_traj.V1[k])) * dt
+
+    prev_traj.CA2[k+1] = prev_traj.CA2[k] + ((prev_traj.F1[k] / prev_traj.V2[k]) * (prev_traj.CA1[k] - prev_traj.CA2[k]) + (prev_traj.F02[k] / prev_traj.V2[k]) * (CA02 - prev_traj.CA2[k]) - (k10 * exp(-E1 / (R * prev_traj.T2[k])) * prev_traj.CA2[k] + k20 * exp(-E2 / (R * prev_traj.T2[k])) * prev_traj.CA2[k] + k30 * exp(-E3 / (R * prev_traj.T2[k])) * prev_traj.CA2[k])) * dt
+    prev_traj.T2[k+1] = prev_traj.T2[k] + ((prev_traj.F1[k] / prev_traj.V2[k]) * (prev_traj.T1[k] - prev_traj.T2[k]) + (prev_traj.F02[k] / prev_traj.V2[k]) * (T02 - prev_traj.T2[k]) - ((delH1 / (rho * cp)) * k10 * exp(-E1 / (R * prev_traj.T2[k])) * prev_traj.CA2[k] + (delH2 / (rho * cp)) * k20 * exp(-E2 / (R * prev_traj.T2[k])) * prev_traj.CA2[k] + (delH3 / (rho * cp)) * k30 * exp(-E3 / (R * prev_traj.T2[k])) * prev_traj.CA2[k]) + prev_traj.Q2[k] / (rho * cp * prev_traj.V2[k])) * dt
+
+    prev_traj.CA3[k+1] = prev_traj.CA3[k] + (((prev_traj.F2[k] - prev_traj.Fr1[k]) / prev_traj.V3[k]) * (prev_traj.CA2[k] - prev_traj.CA3[k]) + (prev_traj.F03[k] / prev_traj.V3[k]) * (CA03 - prev_traj.CA3[k]) - (k10 * exp(-E1 / (R * prev_traj.T3[k])) * prev_traj.CA3[k] + k20 * exp(-E2 / (R * prev_traj.T3[k])) * prev_traj.CA3[k] + k30 * exp(-E3 / (R * prev_traj.T3[k])) * prev_traj.CA3[k])) * dt
+    prev_traj.T3[k+1] = prev_traj.T3[k] + (((prev_traj.F2[k] - prev_traj.Fr1[k]) / prev_traj.V3[k]) * (prev_traj.T2[k] - prev_traj.T3[k]) + (prev_traj.F03[k] / prev_traj.V3[k]) * (T03 - prev_traj.T3[k]) - ((delH1 / (rho * cp)) * k10 * exp(-E1 / (R * prev_traj.T3[k])) * prev_traj.CA3[k] + (delH2 / (rho * cp)) * k20 * exp(-E2 / (R * prev_traj.T3[k])) * prev_traj.CA3[k] + (delH3 / (rho * cp)) * k30 * exp(-E3 / (R * prev_traj.T3[k])) * prev_traj.CA3[k]) + prev_traj.Q3[k] / (rho * cp * prev_traj.V3[k])) * dt
+
+    prev_traj.CA4[k+1] = prev_traj.CA4[k] + ((prev_traj.F3[k] / prev_traj.V4[k]) * (prev_traj.CA3[k] - prev_traj.CA4[k]) + (prev_traj.F04[k] / prev_traj.V4[k]) * (CA04 - prev_traj.CA4[k]) - (k10 * exp(-E1 / (R * prev_traj.T4[k])) * prev_traj.CA4[k] + k20 * exp(-E2 / (R * prev_traj.T4[k])) * prev_traj.CA4[k] + k30 * exp(-E3 / (R * prev_traj.T4[k])) * prev_traj.CA4[k])) * dt
+    prev_traj.T4[k+1] = prev_traj.T4[k] + ((prev_traj.F3[k] / prev_traj.V4[k]) * (prev_traj.T3[k] - prev_traj.T4[k]) + (prev_traj.F04[k] / prev_traj.V4[k]) * (T04 - prev_traj.T4[k]) - ((delH1 / (rho * cp)) * k10 * exp(-E1 / (R * prev_traj.T4[k])) * prev_traj.CA4[k] + (delH2 / (rho * cp)) * k20 * exp(-E2 / (R * prev_traj.T4[k])) * prev_traj.CA4[k] + (delH3 / (rho * cp)) * k30 * exp(-E3 / (R * prev_traj.T4[k])) * prev_traj.CA4[k]) + prev_traj.Q4[k] / (rho * cp * prev_traj.V4[k])) * dt
+
 end
 
-# w = Weights(gW(CA1_sp), gW(CA2_sp), gW(CA3_sp), gW(CA4_sp), gW(T1_sp), gW(T2_sp), gW(T3_sp), gW(T4_sp), gW(V1_sp), gW(V2_sp), gW(V3_sp), gW(V4_sp), 1e0*gW(F1_sp), 1e0*gW(F2_sp), 1e0*gW(F3_sp), 1e0*gW(F4_sp), 1e0*gW(F01_sp), 1e0*gW(F02_sp), 1e0*gW(F03_sp), 1e0*gW(F04_sp), 1e0*gW(Fr1_sp), 1e0*gW(Fr2_sp), 1e0*gW(Q1_sp), 1e0*gW(Q2_sp), 1e0*gW(Q3_sp), 1e0*gW(Q4_sp))
+# Formulate a guess for copyectory and copy by dynamics at steady state
+copy.F1 .= F1_sp
+copy.F2 .= F2_sp
+copy.F3 .= F3_sp
+copy.F4 .= F4_sp
 
-w = let elements = [gW(CA1_sp), gW(CA2_sp), gW(CA3_sp), gW(CA4_sp),
-    gW(T1_sp), gW(T2_sp), gW(T3_sp), gW(T4_sp),
-    gW(V1_sp), gW(V2_sp), gW(V3_sp), gW(V4_sp),
-    1e0*gW(F1_sp), 1e0*gW(F2_sp), 1e0*gW(F3_sp), 1e0*gW(F4_sp),
-    1e0*gW(F01_sp), 1e0*gW(F02_sp), 1e0*gW(F03_sp), 1e0*gW(F04_sp),
-    1e0*gW(Fr1_sp), 1e0*gW(Fr2_sp),
-    1e0*gW(Q1_sp), 1e0*gW(Q2_sp), 1e0*gW(Q3_sp), 1e0*gW(Q4_sp)]
-max_val = maximum(elements)
-Weights((e / max_val for e in elements)...)
+copy.F01 .= F01_sp
+copy.F02 .= F02_sp
+copy.F03 .= F03_sp
+copy.F04 .= F04_sp
+
+copy.Fr1 .= Fr1_sp
+copy.Fr2 .= Fr2_sp
+
+copy.Q1 .= Q1_sp
+copy.Q2 .= Q2_sp
+copy.Q3 .= Q3_sp
+copy.Q4 .= Q4_sp
+
+copy.CA1[1] = CA1_init
+copy.CA2[1] = CA2_init
+copy.CA3[1] = CA3_init
+copy.CA4[1] = CA4_init
+
+copy.T1[1] = T1_init
+copy.T2[1] = T2_init
+copy.T3[1] = T3_init
+copy.T4[1] = T4_init
+
+copy.V1[1] = V1_init
+copy.V2[1] = V2_init
+copy.V3[1] = V3_init
+copy.V4[1] = V4_init
+
+for k = 1:N
+
+    copy.V1[k+1] = copy.V1[k] + (copy.F01[k] + copy.Fr2[k] + copy.Fr1[k] - copy.F1[k]) * dt
+    copy.V2[k+1] = copy.V2[k] + (copy.F1[k] + copy.F02[k] - copy.F2[k]) * dt
+    copy.V3[k+1] = copy.V3[k] + ((copy.F2[k] - copy.Fr1[k]) + copy.F03[k] - copy.F3[k]) * dt
+    copy.V4[k+1] = copy.V4[k] + (copy.F3[k] + copy.F04[k] - copy.F4[k]) * dt
+
+    copy.CA1[k+1] = copy.CA1[k] + ((copy.F01[k] / copy.V1[k]) * (CA01 - copy.CA1[k]) + (copy.Fr1[k] / copy.V1[k]) * (copy.CA2[k] - copy.CA1[k]) + (copy.Fr2[k] / copy.V1[k]) * (copy.CA4[k] - copy.CA1[k]) - (k10 * exp(-E1 / (R * copy.T1[k])) * copy.CA1[k] + k20 * exp(-E2 / (R * copy.T1[k])) * copy.CA1[k] + k30 * exp(-E3 / (R * copy.T1[k])) * copy.CA1[k])) * dt
+    copy.T1[k+1] = copy.T1[k] + ((copy.F01[k] / copy.V1[k]) * (T01 - copy.T1[k]) + (copy.Fr1[k] / copy.V1[k]) * (copy.T2[k] - copy.T1[k]) + (copy.Fr2[k] / copy.V1[k]) * (copy.T4[k] - copy.T1[k]) - ((delH1 / (rho * cp)) * k10 * exp(-E1 / (R * copy.T1[k])) * copy.CA1[k] + (delH2 / (rho * cp)) * k20 * exp(-E2 / (R * copy.T1[k])) * copy.CA1[k] + (delH3 / (rho * cp)) * k30 * exp(-E3 / (R * copy.T1[k])) * copy.CA1[k]) + copy.Q1[k] / (rho * cp * copy.V1[k])) * dt
+
+    copy.CA2[k+1] = copy.CA2[k] + ((copy.F1[k] / copy.V2[k]) * (copy.CA1[k] - copy.CA2[k]) + (copy.F02[k] / copy.V2[k]) * (CA02 - copy.CA2[k]) - (k10 * exp(-E1 / (R * copy.T2[k])) * copy.CA2[k] + k20 * exp(-E2 / (R * copy.T2[k])) * copy.CA2[k] + k30 * exp(-E3 / (R * copy.T2[k])) * copy.CA2[k])) * dt
+    copy.T2[k+1] = copy.T2[k] + ((copy.F1[k] / copy.V2[k]) * (copy.T1[k] - copy.T2[k]) + (copy.F02[k] / copy.V2[k]) * (T02 - copy.T2[k]) - ((delH1 / (rho * cp)) * k10 * exp(-E1 / (R * copy.T2[k])) * copy.CA2[k] + (delH2 / (rho * cp)) * k20 * exp(-E2 / (R * copy.T2[k])) * copy.CA2[k] + (delH3 / (rho * cp)) * k30 * exp(-E3 / (R * copy.T2[k])) * copy.CA2[k]) + copy.Q2[k] / (rho * cp * copy.V2[k])) * dt
+
+    copy.CA3[k+1] = copy.CA3[k] + (((copy.F2[k] - copy.Fr1[k]) / copy.V3[k]) * (copy.CA2[k] - copy.CA3[k]) + (copy.F03[k] / copy.V3[k]) * (CA03 - copy.CA3[k]) - (k10 * exp(-E1 / (R * copy.T3[k])) * copy.CA3[k] + k20 * exp(-E2 / (R * copy.T3[k])) * copy.CA3[k] + k30 * exp(-E3 / (R * copy.T3[k])) * copy.CA3[k])) * dt
+    copy.T3[k+1] = copy.T3[k] + (((copy.F2[k] - copy.Fr1[k]) / copy.V3[k]) * (copy.T2[k] - copy.T3[k]) + (copy.F03[k] / copy.V3[k]) * (T03 - copy.T3[k]) - ((delH1 / (rho * cp)) * k10 * exp(-E1 / (R * copy.T3[k])) * copy.CA3[k] + (delH2 / (rho * cp)) * k20 * exp(-E2 / (R * copy.T3[k])) * copy.CA3[k] + (delH3 / (rho * cp)) * k30 * exp(-E3 / (R * copy.T3[k])) * copy.CA3[k]) + copy.Q3[k] / (rho * cp * copy.V3[k])) * dt
+
+    copy.CA4[k+1] = copy.CA4[k] + ((copy.F3[k] / copy.V4[k]) * (copy.CA3[k] - copy.CA4[k]) + (copy.F04[k] / copy.V4[k]) * (CA04 - copy.CA4[k]) - (k10 * exp(-E1 / (R * copy.T4[k])) * copy.CA4[k] + k20 * exp(-E2 / (R * copy.T4[k])) * copy.CA4[k] + k30 * exp(-E3 / (R * copy.T4[k])) * copy.CA4[k])) * dt
+    copy.T4[k+1] = copy.T4[k] + ((copy.F3[k] / copy.V4[k]) * (copy.T3[k] - copy.T4[k]) + (copy.F04[k] / copy.V4[k]) * (T04 - copy.T4[k]) - ((delH1 / (rho * cp)) * k10 * exp(-E1 / (R * copy.T4[k])) * copy.CA4[k] + (delH2 / (rho * cp)) * k20 * exp(-E2 / (R * copy.T4[k])) * copy.CA4[k] + (delH3 / (rho * cp)) * k30 * exp(-E3 / (R * copy.T4[k])) * copy.CA4[k]) + copy.Q4[k] / (rho * cp * copy.V4[k])) * dt
+
 end
 
-admm = ADMM_variables(zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), w.ca4*initial_rho, w.t4*initial_rho, w.fr2*initial_rho, w.ca2*initial_rho, w.t2*initial_rho, w.f2*initial_rho, w.fr1*initial_rho)
+# Formulate a guess for copyectory and copy by dynamics at steady state
+prev_copy.F1 .= F1_sp
+prev_copy.F2 .= F2_sp
+prev_copy.F3 .= F3_sp
+prev_copy.F4 .= F4_sp
+
+prev_copy.F01 .= F01_sp
+prev_copy.F02 .= F02_sp
+prev_copy.F03 .= F03_sp
+prev_copy.F04 .= F04_sp
+
+prev_copy.Fr1 .= Fr1_sp
+prev_copy.Fr2 .= Fr2_sp
+
+prev_copy.Q1 .= Q1_sp
+prev_copy.Q2 .= Q2_sp
+prev_copy.Q3 .= Q3_sp
+prev_copy.Q4 .= Q4_sp
+
+prev_copy.CA1[1] = CA1_init
+prev_copy.CA2[1] = CA2_init
+prev_copy.CA3[1] = CA3_init
+prev_copy.CA4[1] = CA4_init
+
+prev_copy.T1[1] = T1_init
+prev_copy.T2[1] = T2_init
+prev_copy.T3[1] = T3_init
+prev_copy.T4[1] = T4_init
+
+prev_copy.V1[1] = V1_init
+prev_copy.V2[1] = V2_init
+prev_copy.V3[1] = V3_init
+prev_copy.V4[1] = V4_init
+
+for k = 1:N
+
+    prev_copy.V1[k+1] = prev_copy.V1[k] + (prev_copy.F01[k] + prev_copy.Fr2[k] + prev_copy.Fr1[k] - prev_copy.F1[k]) * dt
+    prev_copy.V2[k+1] = prev_copy.V2[k] + (prev_copy.F1[k] + prev_copy.F02[k] - prev_copy.F2[k]) * dt
+    prev_copy.V3[k+1] = prev_copy.V3[k] + ((prev_copy.F2[k] - prev_copy.Fr1[k]) + prev_copy.F03[k] - prev_copy.F3[k]) * dt
+    prev_copy.V4[k+1] = prev_copy.V4[k] + (prev_copy.F3[k] + prev_copy.F04[k] - prev_copy.F4[k]) * dt
+
+    prev_copy.CA1[k+1] = prev_copy.CA1[k] + ((prev_copy.F01[k] / prev_copy.V1[k]) * (CA01 - prev_copy.CA1[k]) + (prev_copy.Fr1[k] / prev_copy.V1[k]) * (prev_copy.CA2[k] - prev_copy.CA1[k]) + (prev_copy.Fr2[k] / prev_copy.V1[k]) * (prev_copy.CA4[k] - prev_copy.CA1[k]) - (k10 * exp(-E1 / (R * prev_copy.T1[k])) * prev_copy.CA1[k] + k20 * exp(-E2 / (R * prev_copy.T1[k])) * prev_copy.CA1[k] + k30 * exp(-E3 / (R * prev_copy.T1[k])) * prev_copy.CA1[k])) * dt
+    prev_copy.T1[k+1] = prev_copy.T1[k] + ((prev_copy.F01[k] / prev_copy.V1[k]) * (T01 - prev_copy.T1[k]) + (prev_copy.Fr1[k] / prev_copy.V1[k]) * (prev_copy.T2[k] - prev_copy.T1[k]) + (prev_copy.Fr2[k] / prev_copy.V1[k]) * (prev_copy.T4[k] - prev_copy.T1[k]) - ((delH1 / (rho * cp)) * k10 * exp(-E1 / (R * prev_copy.T1[k])) * prev_copy.CA1[k] + (delH2 / (rho * cp)) * k20 * exp(-E2 / (R * prev_copy.T1[k])) * prev_copy.CA1[k] + (delH3 / (rho * cp)) * k30 * exp(-E3 / (R * prev_copy.T1[k])) * prev_copy.CA1[k]) + prev_copy.Q1[k] / (rho * cp * prev_copy.V1[k])) * dt
+
+    prev_copy.CA2[k+1] = prev_copy.CA2[k] + ((prev_copy.F1[k] / prev_copy.V2[k]) * (prev_copy.CA1[k] - prev_copy.CA2[k]) + (prev_copy.F02[k] / prev_copy.V2[k]) * (CA02 - prev_copy.CA2[k]) - (k10 * exp(-E1 / (R * prev_copy.T2[k])) * prev_copy.CA2[k] + k20 * exp(-E2 / (R * prev_copy.T2[k])) * prev_copy.CA2[k] + k30 * exp(-E3 / (R * prev_copy.T2[k])) * prev_copy.CA2[k])) * dt
+    prev_copy.T2[k+1] = prev_copy.T2[k] + ((prev_copy.F1[k] / prev_copy.V2[k]) * (prev_copy.T1[k] - prev_copy.T2[k]) + (prev_copy.F02[k] / prev_copy.V2[k]) * (T02 - prev_copy.T2[k]) - ((delH1 / (rho * cp)) * k10 * exp(-E1 / (R * prev_copy.T2[k])) * prev_copy.CA2[k] + (delH2 / (rho * cp)) * k20 * exp(-E2 / (R * prev_copy.T2[k])) * prev_copy.CA2[k] + (delH3 / (rho * cp)) * k30 * exp(-E3 / (R * prev_copy.T2[k])) * prev_copy.CA2[k]) + prev_copy.Q2[k] / (rho * cp * prev_copy.V2[k])) * dt
+
+    prev_copy.CA3[k+1] = prev_copy.CA3[k] + (((prev_copy.F2[k] - prev_copy.Fr1[k]) / prev_copy.V3[k]) * (prev_copy.CA2[k] - prev_copy.CA3[k]) + (prev_copy.F03[k] / prev_copy.V3[k]) * (CA03 - prev_copy.CA3[k]) - (k10 * exp(-E1 / (R * prev_copy.T3[k])) * prev_copy.CA3[k] + k20 * exp(-E2 / (R * prev_copy.T3[k])) * prev_copy.CA3[k] + k30 * exp(-E3 / (R * prev_copy.T3[k])) * prev_copy.CA3[k])) * dt
+    prev_copy.T3[k+1] = prev_copy.T3[k] + (((prev_copy.F2[k] - prev_copy.Fr1[k]) / prev_copy.V3[k]) * (prev_copy.T2[k] - prev_copy.T3[k]) + (prev_copy.F03[k] / prev_copy.V3[k]) * (T03 - prev_copy.T3[k]) - ((delH1 / (rho * cp)) * k10 * exp(-E1 / (R * prev_copy.T3[k])) * prev_copy.CA3[k] + (delH2 / (rho * cp)) * k20 * exp(-E2 / (R * prev_copy.T3[k])) * prev_copy.CA3[k] + (delH3 / (rho * cp)) * k30 * exp(-E3 / (R * prev_copy.T3[k])) * prev_copy.CA3[k]) + prev_copy.Q3[k] / (rho * cp * prev_copy.V3[k])) * dt
+
+    prev_copy.CA4[k+1] = prev_copy.CA4[k] + ((prev_copy.F3[k] / prev_copy.V4[k]) * (prev_copy.CA3[k] - prev_copy.CA4[k]) + (prev_copy.F04[k] / prev_copy.V4[k]) * (CA04 - prev_copy.CA4[k]) - (k10 * exp(-E1 / (R * prev_copy.T4[k])) * prev_copy.CA4[k] + k20 * exp(-E2 / (R * prev_copy.T4[k])) * prev_copy.CA4[k] + k30 * exp(-E3 / (R * prev_copy.T4[k])) * prev_copy.CA4[k])) * dt
+    prev_copy.T4[k+1] = prev_copy.T4[k] + ((prev_copy.F3[k] / prev_copy.V4[k]) * (prev_copy.T3[k] - prev_copy.T4[k]) + (prev_copy.F04[k] / prev_copy.V4[k]) * (T04 - prev_copy.T4[k]) - ((delH1 / (rho * cp)) * k10 * exp(-E1 / (R * prev_copy.T4[k])) * prev_copy.CA4[k] + (delH2 / (rho * cp)) * k20 * exp(-E2 / (R * prev_copy.T4[k])) * prev_copy.CA4[k] + (delH3 / (rho * cp)) * k30 * exp(-E3 / (R * prev_copy.T4[k])) * prev_copy.CA4[k]) + prev_copy.Q4[k] / (rho * cp * prev_copy.V4[k])) * dt
+
+end
+
+admm = ADMM_variables(zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), zeros(N + 1), w.ca4 * initial_rho, w.t4 * initial_rho, w.fr2 * initial_rho, w.ca2 * initial_rho, w.t2 * initial_rho, w.f2 * initial_rho, w.fr1 * initial_rho)
 
 
 function ADMM_1()
 
-    admm_steps = 10
+    admm_steps = 30
+
+    r1_1 = zeros(admm_steps)
+    r1_2 = zeros(admm_steps)
+    r1_3 = zeros(admm_steps)
+
+    r2_1 = zeros(admm_steps)
+    r2_2 = zeros(admm_steps)
+    r2_3 = zeros(admm_steps)
+    r2_4 = zeros(admm_steps)
+
+    s1_1 = zeros(admm_steps)
+    s1_2 = zeros(admm_steps)
+    s1_3 = zeros(admm_steps)
+
+    s2_1 = zeros(admm_steps)
+    s2_2 = zeros(admm_steps)
+    s2_3 = zeros(admm_steps)
+    s2_4 = zeros(admm_steps)
+
+    primal_residual = zeros(admm_steps)
+    dual_residual = zeros(admm_steps)
 
     function sp1()
 
@@ -338,23 +520,23 @@ function ADMM_1()
                                    for k = 0:N)
                                # Add in copy variable lagrangians and quadratic penalty GIVEN to other subproblems
                                +
-                               sum(admm.u2_1[k+1] * CA2[k] + (admm.rho2_1 / 2) * (CA2[k] - copy.CA2[k+1])^2 for k = 0:N)
+                               sum(admm.u2_1[k+1] * CA2[k] + (admm.rho2_1 / 2) * (CA2[k] - prev_copy.CA2[k+1])^2 for k = 0:N)
                                +
-                               sum(admm.u2_2[k+1] * T2[k] + (admm.rho2_2 / 2) * (T2[k] - copy.T2[k+1])^2 for k = 0:N)
+                               sum(admm.u2_2[k+1] * T2[k] + (admm.rho2_2 / 2) * (T2[k] - prev_copy.T2[k+1])^2 for k = 0:N)
                                +
-                               sum(admm.u2_3[k+1] * F2[k] + (admm.rho2_3 / 2) * (F2[k] - copy.F2[k+1])^2 for k = 0:N)
+                               sum(admm.u2_3[k+1] * F2[k] + (admm.rho2_3 / 2) * (F2[k] - prev_copy.F2[k+1])^2 for k = 0:N)
                                +
-                               sum(admm.u2_4[k+1] * Fr1[k] + (admm.rho2_4 / 2) * (Fr1[k] - copy.Fr1[k+1])^2 for k = 0:N)
+                               sum(admm.u2_4[k+1] * Fr1[k] + (admm.rho2_4 / 2) * (Fr1[k] - prev_copy.Fr1[k+1])^2 for k = 0:N)
 
                                # Add in copy variable lagrangians and quadratic penalty FROM other subproblems
                                +
-                               sum(-1 * admm.u1_1[k+1] * CA4[k] + (admm.rho1_1 / 2) * (traj.CA4[k+1] - CA4[k])^2 for k = 0:N)
+                               sum(-1 * admm.u1_1[k+1] * CA4[k] + (admm.rho1_1 / 2) * (prev_traj.CA4[k+1] - CA4[k])^2 for k = 0:N)
                                +
-                               sum(-1 * admm.u1_2[k+1] * T4[k] + (admm.rho1_2 / 2) * (traj.T4[k+1] - T4[k])^2 for k = 0:N)
+                               sum(-1 * admm.u1_2[k+1] * T4[k] + (admm.rho1_2 / 2) * (prev_traj.T4[k+1] - T4[k])^2 for k = 0:N)
                                +
-                               sum(-1 * admm.u1_3[k+1] * Fr2[k] + (admm.rho1_3 / 2) * (traj.Fr2[k+1] - Fr2[k])^2 for k = 0:N)
+                               sum(-1 * admm.u1_3[k+1] * Fr2[k] + (admm.rho1_3 / 2) * (prev_traj.Fr2[k+1] - Fr2[k])^2 for k = 0:N)
         )
-
+        set_silent(mpc)
         optimize!(mpc)
 
         # Extract control actions
@@ -470,21 +652,23 @@ function ADMM_1()
                 for k = 0:N)
             # Add in copy variable lagrangians and quadratic penalty GIVEN to other subproblems
             +
-            sum(admm.u1_1[k+1] * CA4[k] + (admm.rho1_1 / 2) * (CA4[k] - copy.CA4[k+1])^2 for k = 0:N)
+            sum(admm.u1_1[k+1] * CA4[k] + (admm.rho1_1 / 2) * (CA4[k] - prev_copy.CA4[k+1])^2 for k = 0:N)
             +
-            sum(admm.u1_2[k+1] * T4[k] + (admm.rho1_2 / 2) * (T4[k] - copy.T4[k+1])^2 for k = 0:N)
+            sum(admm.u1_2[k+1] * T4[k] + (admm.rho1_2 / 2) * (T4[k] - prev_copy.T4[k+1])^2 for k = 0:N)
             +
-            sum(admm.u1_3[k+1] * Fr2[k] + (admm.rho1_3 / 2) * (Fr2[k] - copy.Fr2[k+1])^2 for k = 0:N)
+            sum(admm.u1_3[k+1] * Fr2[k] + (admm.rho1_3 / 2) * (Fr2[k] - prev_copy.Fr2[k+1])^2 for k = 0:N)
             # Add in copy variable lagrangians and quadratic penalty FROM other subproblems
             +
-            sum(-1 * admm.u2_1[k+1] * CA2[k] + (admm.rho2_1 / 2) * (traj.CA2[k+1] - CA2[k])^2 for k = 0:N)
+            sum(-1 * admm.u2_1[k+1] * CA2[k] + (admm.rho2_1 / 2) * (prev_traj.CA2[k+1] - CA2[k])^2 for k = 0:N)
             +
-            sum(-1 * admm.u2_2[k+1] * T2[k] + (admm.rho2_2 / 2) * (traj.T2[k+1] - T2[k])^2 for k = 0:N)
+            sum(-1 * admm.u2_2[k+1] * T2[k] + (admm.rho2_2 / 2) * (prev_traj.T2[k+1] - T2[k])^2 for k = 0:N)
             +
-            sum(-1 * admm.u2_3[k+1] * F2[k] + (admm.rho2_3 / 2) * (traj.F2[k+1] - F2[k])^2 for k = 0:N)
+            sum(-1 * admm.u2_3[k+1] * F2[k] + (admm.rho2_3 / 2) * (prev_traj.F2[k+1] - F2[k])^2 for k = 0:N)
             +
-            sum(-1 * admm.u2_4[k+1] * Fr1[k] + (admm.rho2_4 / 2) * (traj.Fr1[k+1] - Fr1[k])^2 for k = 0:N)
+            sum(-1 * admm.u2_4[k+1] * Fr1[k] + (admm.rho2_4 / 2) * (prev_traj.Fr1[k+1] - Fr1[k])^2 for k = 0:N)
         )
+
+        set_silent(mpc)
 
         optimize!(mpc)
 
@@ -520,7 +704,7 @@ function ADMM_1()
     for k = 1:admm_steps
         # Solve subproblems
         traj.F1, traj.F2, traj.F01, traj.F02, traj.Fr1, traj.Q1, traj.Q2, traj.T1, traj.T2, traj.V1, traj.V2, traj.CA1, traj.CA2, copy.CA4, copy.T4, copy.Fr2 = sp1()
-        traj.F3, traj.F4, traj.F03, traj.F04, traj.Fr2, traj.Q3, traj.Q4 , traj.T3, traj.T4, traj.V3, traj.V4, traj.CA3, traj.CA4, copy.CA2, copy.T2, copy.F2, copy.Fr1 = sp2()
+        traj.F3, traj.F4, traj.F03, traj.F04, traj.Fr2, traj.Q3, traj.Q4, traj.T3, traj.T4, traj.V3, traj.V4, traj.CA3, traj.CA4, copy.CA2, copy.T2, copy.F2, copy.Fr1 = sp2()
 
         # Update dual variables
         for j = 1:N+1
@@ -533,18 +717,49 @@ function ADMM_1()
             admm.u2_2[j] = admm.u2_2[j] + admm.rho2_2 * (traj.T2[j] - copy.T2[j])
             admm.u2_3[j] = admm.u2_3[j] + admm.rho2_3 * (traj.F2[j] - copy.F2[j])
             admm.u2_4[j] = admm.u2_4[j] + admm.rho2_4 * (traj.Fr1[j] - copy.Fr1[j])
-        
+
         end
 
-        p1 = plot(traj.Fr2, laebl = "Fr2")
-        plot!(copy.Fr2, laebl = "copy-Fr2")
-        p2 = plot(traj.V4, laebl = "V4")
-        plot!(copy.V4, laebl = "copy-V4")
-        p = plot(p1, p2)
-        display(p)
+        r1_1[k] = norm(traj.CA4 - prev_traj.CA4, 2)
+        r1_2[k] = norm(traj.T4 - prev_traj.T4, 2)
+        r1_3[k] = norm(traj.Fr2 - prev_traj.Fr2, 2)
 
-        # Update previous trajectory (if needed for convergence checking)
+        r2_1[k] = norm(traj.CA2 - prev_traj.CA2, 2)
+        r2_2[k] = norm(traj.T2 - prev_traj.T2, 2)
+        r2_3[k] = norm(traj.F2 - prev_traj.F2, 2)
+        r2_4[k] = norm(traj.Fr1 - prev_traj.Fr1, 2)
 
+        
+        s1_1[k] = norm(copy.CA4 - prev_copy.CA4, 2)
+        s1_2[k] = norm(copy.T4 - prev_copy.T4, 2)
+        s1_3[k] = norm(copy.Fr2 - prev_copy.Fr2, 2)
+
+        s2_1[k] = norm(copy.CA2 - prev_copy.CA2, 2)
+        s2_2[k] = norm(copy.T2 - prev_copy.T2, 2)
+        s2_3[k] = norm(copy.F2 - prev_copy.F2, 2)
+        s2_4[k] = norm(copy.Fr1 - prev_copy.Fr1, 2)
+
+        primal_residual[k] = r1_1[k] + r1_2[k] + r1_3[k] + r2_1[k] + r2_2[k] + r2_3[k] + r2_4[k]
+        dual_residual[k] = s1_1[k] + s1_2[k] + s1_3[k] + s2_1[k] + s2_2[k] + s2_3[k] + s2_4[k]
+
+
+        prev_traj.CA4 = traj.CA4 
+        prev_traj.T4 = traj.T4 
+        prev_traj.Fr2 = traj.Fr2
+
+        prev_traj.CA2 = traj.CA2 
+        prev_traj.T2 = traj.T2 
+        prev_traj.F2 = traj.F2
+        prev_traj.Fr1 = traj.Fr1
+
+        prev_copy.CA4 = copy.CA4 
+        prev_copy.T4 = copy.T4 
+        prev_copy.Fr2 = copy.Fr2
+
+        prev_copy.CA2 = copy.CA2 
+        prev_copy.T2 = copy.T2 
+        prev_copy.F2 = copy.F2
+        prev_copy.Fr1 = copy.Fr1
     end
 
     F1 = traj.F1
@@ -562,7 +777,7 @@ function ADMM_1()
     Fr1 = traj.Fr1
     Fr2 = traj.Fr2
 
-    return F1, F2, F3, F4, F01, F02, F03, F04, Q1, Q2, Q3, Q4, Fr1, Fr2
+    return F1, F2, F3, F4, F01, F02, F03, F04, Q1, Q2, Q3, Q4, Fr1, Fr2, r1_1, r1_2, r1_3, r2_1, r2_2, r2_3, r2_4, s1_1, s1_2, s1_3, s2_1, s2_2, s2_3, s2_4, primal_residual, dual_residual
 end
 
 function CMPC()
@@ -666,6 +881,7 @@ function CMPC()
                                w.q1 * (Q1[k] - Q1_sp)^2 + w.q2 * (Q2[k] - Q2_sp)^2 + w.q3 * (Q3[k] - Q3_sp)^2 + w.q4 * (Q4[k] - Q4_sp)^2
                                for k = 0:N))
 
+    set_silent(mpc)
     optimize!(mpc)
 
 
@@ -752,22 +968,26 @@ function getPI(F1, F2, F3, F4, F01, F02, F03, F04, Q1, Q2, Q3, Q4, Fr1, Fr2, CA1
     ISE = sum(w.ca1 * (CA1[k] - CA1_sp)^2 + w.ca2 * (CA2[k] - CA2_sp)^2 + w.ca3 * (CA3[k] - CA3_sp)^2 + w.ca4 * (CA4[k] - CA4_sp)^2 +
               w.t1 * (T1[k] - T1_sp)^2 + w.t2 * (T2[k] - T2_sp)^2 + w.t3 * (T3[k] - T3_sp)^2 + w.t4 * (T4[k] - T4_sp)^2 +
               w.v1 * (V1[k] - V1_sp)^2 + w.v2 * (V2[k] - V2_sp)^2 + w.v3 * (V3[k] - V3_sp)^2 + w.v4 * (V4[k] - V4_sp)^2
-              for k = 1:N)
+              for k = 1:N) * 1E3
 
     ISC = sum(w.f1 * (F1[k] - F1_sp)^2 + w.f2 * (F2[k] - F2_sp)^2 + w.f3 * (F3[k] - F3_sp)^2 + w.f4 * (F4[k] - F4_sp)^2 +
               w.f01 * (F01[k] - F01_sp)^2 + w.f02 * (F02[k] - F02_sp)^2 + w.f03 * (F03[k] - F03_sp)^2 + w.f04 * (F04[k] - F04_sp)^2 +
               w.fr1 * (Fr1[k] - Fr1_sp)^2 + w.fr2 * (Fr2[k] - Fr2_sp)^2 +
               w.q1 * (Q1[k] - Q1_sp)^2 + w.q2 * (Q2[k] - Q2_sp)^2 + w.q3 * (Q3[k] - Q3_sp)^2 + w.q4 * (Q4[k] - Q4_sp)^2
-              for k = 1:N-1)
+              for k = 1:N-1) * 1E3
 
     PI = ISE + ISC
 
     return ISE, ISC, PI
 end
 
-F1, F2, F3, F4, F01, F02, F03, F04, Q1, Q2, Q3, Q4, Fr1, Fr2 = ADMM_1()
+# F1, F2, F3, F4, F01, F02, F03, F04, Q1, Q2, Q3, Q4, Fr1, Fr2 = CMPC()
+F1, F2, F3, F4, F01, F02, F03, F04, Q1, Q2, Q3, Q4, Fr1, Fr2, r1_1, r1_2, r1_3, r2_1, r2_2, r2_3, r2_4, s1_1, s1_2, s1_3, s2_1, s2_2, s2_3, s2_4, primal_residual, dual_residual = ADMM_1()
+
 CA1, CA2, CA3, CA4, T1, T2, T3, T4, V1, V2, V3, V4 = getTraj(F1, F2, F3, F4, F01, F02, F03, F04, Q1, Q2, Q3, Q4, Fr1, Fr2)
 ISE, ISC, PI = getPI(F1, F2, F3, F4, F01, F02, F03, F04, Q1, Q2, Q3, Q4, Fr1, Fr2, CA1, CA2, CA3, CA4, T1, T2, T3, T4, V1, V2, V3, V4)
+println(PI)
+p1 = plot(primal_residual, label = "Primal norm")
+p2 = plot(dual_residual, label = "Dual norm")
+plot(p1, p2)
 
-plot(V1)
-hline!([V1_sp])
