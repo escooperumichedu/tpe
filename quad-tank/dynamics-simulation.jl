@@ -89,15 +89,13 @@ for k = 1:(length(CA1)-1)
     T1[k+1] = T1[k] + ((F01 / V1) * (T01 - T1[k]) + (Fr1 / V1) * (T2[k] - T1[k]) + (Fr2 / V1) * (T4[k] - T1[k]) - ((delH1 / (rho * cp)) * k10 * exp(-E1 / (R * T1[k])) * CA1[k] + (delH2 / (rho * cp)) * k20 * exp(-E2 / (R * T1[k])) * CA1[k] + (delH3 / (rho * cp)) * k30 * exp(-E3 / (R * T1[k])) * CA1[k]) + Q1/(rho*cp*V1))*dt
 
     CA2[k+1] = CA2[k] + ((F1 / V2) * (CA1[k] - CA2[k]) + (F02 / V2) * (CA02 - CA2[k]) - (k10 * exp(-E1 / (R * T2[k])) * CA2[k] + k20 * exp(-E2 / (R * T2[k])) * CA2[k] + k30 * exp(-E3 / (R * T2[k])) * CA2[k])) * dt
-    T2[k+1] = T2[k] + ((F1 / V1) * (T1[k] - T2[k]) + (F02 / V2) * (T02 - T2[k]) - ((delH1 / (rho * cp)) * k10 * exp(-E1 / (R * T2[k])) * CA2[k] + (delH2 / (rho * cp)) * k20 * exp(-E2 / (R * T2[k])) * CA2[k] + (delH3 / (rho * cp)) * k30 * exp(-E3 / (R * T2[k])) * CA2[k]) + Q2/(rho*cp*V2))*dt
+    T2[k+1] = T2[k] + ((F1 / V2) * (T1[k] - T2[k]) + (F02 / V2) * (T02 - T2[k]) - ((delH1 / (rho * cp)) * k10 * exp(-E1 / (R * T2[k])) * CA2[k] + (delH2 / (rho * cp)) * k20 * exp(-E2 / (R * T2[k])) * CA2[k] + (delH3 / (rho * cp)) * k30 * exp(-E3 / (R * T2[k])) * CA2[k]) + Q2/(rho*cp*V2))*dt
 
     CA3[k+1] = CA3[k] + (((F2 - Fr1) / V3) * (CA2[k] - CA3[k]) + (F03 / V3) * (CA03 - CA3[k]) - (k10 * exp(-E1 / (R * T3[k])) * CA3[k] + k20 * exp(-E2 / (R * T3[k])) * CA3[k] + k30 * exp(-E3 / (R * T3[k])) * CA3[k])) * dt
-    T3[k+1] = T3[k] + (((F2 - Fr1) / V3) * (T2[k] - T3[k]) + (F03 / V3) * (T03 - T3[k]) - ((delH1 / (rho * cp)) * k10 * exp(-E1 / (R * T3[k])) * CA3[k] + (delH2 / (rho * cp)) * k20 * exp(-E2 / (R * T3[k])) * CA3[k] + (delH3 / (rho * cp)) * k30 * exp(-E3 / (R * T3[k])) * CA3[k]) + Q3/(rho*cp*V2))*dt
+    T3[k+1] = T3[k] + (((F2 - Fr1) / V3) * (T2[k] - T3[k]) + (F03 / V3) * (T03 - T3[k]) - ((delH1 / (rho * cp)) * k10 * exp(-E1 / (R * T3[k])) * CA3[k] + (delH2 / (rho * cp)) * k20 * exp(-E2 / (R * T3[k])) * CA3[k] + (delH3 / (rho * cp)) * k30 * exp(-E3 / (R * T3[k])) * CA3[k]) + Q3/(rho*cp*V3))*dt
 
     CA4[k+1] = CA4[k] + ((F3 / V4) * (CA3[k] - CA4[k]) + (F04 / V4) * (CA04 - CA4[k]) - (k10 * exp(-E1 / (R * T4[k])) * CA4[k] + k20 * exp(-E2 / (R * T4[k])) * CA4[k] + k30 * exp(-E3 / (R * T4[k])) * CA4[k])) * dt
-    T4[k+1] = T4[k] + ((F3 / V4) * (T3[k] - T4[k]) + (F04 / V4) * (T04 - T4[k]) - ((delH1 / (rho * cp)) * k10 * exp(-E1 / (R * T4[k])) * CA4[k] + (delH2 / (rho * cp)) * k20 * exp(-E2 / (R * T4[k])) * CA4[k] + (delH3 / (rho * cp)) * k30 * exp(-E3 / (R * T4[k])) * CA4[k]) + Q4/(rho*cp*V2))*dt
-
-
+    T4[k+1] = T4[k] + ((F3 / V4) * (T3[k] - T4[k]) + (F04 / V4) * (T04 - T4[k]) - ((delH1 / (rho * cp)) * k10 * exp(-E1 / (R * T4[k])) * CA4[k] + (delH2 / (rho * cp)) * k20 * exp(-E2 / (R * T4[k])) * CA4[k] + (delH3 / (rho * cp)) * k30 * exp(-E3 / (R * T4[k])) * CA4[k]) + Q4/(rho*cp*V4))*dt
 end
 
 CA4[end]
